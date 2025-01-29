@@ -1,11 +1,7 @@
 import os
 import streamlit as st
 import requests
-import pyttsx3
 from PIL import Image
-
-# Set up text-to-speech engine
-engine = pyttsx3.init()
 
 # Function to classify leaf (simplified, hardcoded)
 def classify_leaf(image):
@@ -38,11 +34,6 @@ def get_weather(location):
     # Return a text response
     return f"The current temperature is {temperature}°C. Weather description: {description}"
 
-# Function to convert text to speech
-def speak(text):
-    engine.say(text)
-    engine.runAndWait()
-
 # Streamlit UI
 st.title("Agriculture Helper Chatbot")
 
@@ -54,7 +45,6 @@ if uploaded_image is not None:
     st.image(image, caption="Uploaded Leaf Image", use_column_width=True)
     leaf_type = classify_leaf(image)
     st.write(f"The leaf is classified as: {leaf_type}")
-    speak(f"The leaf is classified as: {leaf_type}")
 
 # Weather forecasting part
 st.header("Weather Forecasting")
@@ -68,8 +58,5 @@ if st.button("Get Weather Forecast"):
     if location in location_coords:
         weather_info = get_weather(location_coords[location])
         st.write(weather_info)
-        speak(weather_info)
     else:
         st.write("Location not found.")
-        speak("Sorry, I could not find weather information for that location.")
-
