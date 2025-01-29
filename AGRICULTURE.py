@@ -1,12 +1,11 @@
 import os
 import streamlit as st
 import numpy as np
-import tensorflow as tf
 import requests
 import speech_recognition as sr
 import pyttsx3
 from PIL import Image
-from io import BytesIO
+import tensorflow as tf  # Ensure TensorFlow is installed
 
 # Suppress TensorFlow warnings
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'
