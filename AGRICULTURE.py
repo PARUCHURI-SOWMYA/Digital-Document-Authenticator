@@ -1,11 +1,12 @@
 import os
 import streamlit as st
 import numpy as np
+import tensorflow as tf  # Ensure TensorFlow is installed
 import requests
-import speech_recognition as sr
+import speech_recognition as sr  # Make sure this is installed
 import pyttsx3
 from PIL import Image
-import tensorflow as tf  # Ensure TensorFlow is installed
+import tensorflow as tf
 
 # Suppress TensorFlow warnings
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'
@@ -35,20 +36,6 @@ def classify_leaf(image):
     # You can add labels for the classes here
     classes = ['Vegetable', 'Fruit', 'Other']
     return classes[class_index]
-
-# Function to get weather forecast from Open-Meteo API
-def get_weather(location):
-    lat, lon = location  # Convert location to lat and lon (you can improve this step)
-    url = f'https://api.open-meteo.com/v1/forecast?latitude={lat}&longitude={lon}&current_weather=true'
-    response = requests.get(url)
-    weather_data = response.json()
-
-    # Extract relevant information
-    temperature = weather_data['current_weather']['temperature']
-    description = weather_data['current_weather']['weathercode']
-    
-    # Return a text response
-    return f"The current temperature is {temperature}°C. Weather description: {description}"
 
 # Function to handle voice input
 def recognize_speech():
