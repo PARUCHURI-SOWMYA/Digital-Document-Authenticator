@@ -1,7 +1,6 @@
 import os
 import streamlit as st
 import requests
-import speech_recognition as sr  # Ensure SpeechRecognition is installed
 import pyttsx3
 from PIL import Image
 
@@ -39,20 +38,6 @@ def get_weather(location):
     # Return a text response
     return f"The current temperature is {temperature}°C. Weather description: {description}"
 
-# Function to handle voice input
-def recognize_speech():
-    recognizer = sr.Recognizer()
-    with sr.Microphone() as source:
-        st.write("Listening for your voice...")
-        audio = recognizer.listen(source)
-        try:
-            speech_text = recognizer.recognize_google(audio)
-            st.write(f"You said: {speech_text}")
-            return speech_text
-        except Exception as e:
-            st.write("Sorry, I could not understand your speech. Please try again.")
-            return ""
-
 # Function to convert text to speech
 def speak(text):
     engine.say(text)
@@ -88,13 +73,3 @@ if st.button("Get Weather Forecast"):
         st.write("Location not found.")
         speak("Sorry, I could not find weather information for that location.")
 
-# Voice command section
-st.header("Voice Interaction")
-if st.button("Ask a Question"):
-    speech_text = recognize_speech()
-    if "weather" in speech_text.lower():
-        location = "Hyderabad"  # For simplicity, we can set a default location
-        weather_info = get_weather(location_coords.get(location, (17.385044, 78.486671)))
-        speak(weather_info)
-    else:
-        speak("I'm sorry, I can only help with weather queries right now.")
