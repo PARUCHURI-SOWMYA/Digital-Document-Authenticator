@@ -1,41 +1,43 @@
 import os
 import streamlit as st
-import numpy as np
-import tensorflow as tf  # Ensure TensorFlow is installed
 import requests
-import speech_recognition as sr  # Make sure this is installed
+import speech_recognition as sr  # Ensure SpeechRecognition is installed
 import pyttsx3
 from PIL import Image
-import tensorflow as tf
-
-# Suppress TensorFlow warnings
-os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'
-
-# Load pre-trained leaf classification model (update model path as needed)
-model_path = 'leaf_classifier_model.h5'  # Adjust this path
-try:
-    model = tf.keras.models.load_model(model_path)
-except FileNotFoundError:
-    st.write(f"Error: Model file not found at {model_path}. Please ensure the model file is present.")
-    raise
 
 # Set up text-to-speech engine
 engine = pyttsx3.init()
 
-# Function to classify leaf
+# Function to classify leaf (simplified, hardcoded)
 def classify_leaf(image):
-    # Preprocess image for model input (resize, normalization, etc.)
-    image = image.resize((224, 224))  # Resize to model input size
-    image_array = np.array(image) / 255.0  # Normalize
-    image_array = np.expand_dims(image_array, axis=0)  # Add batch dimension
-
-    # Predict class
-    prediction = model.predict(image_array)
-    class_index = np.argmax(prediction)
+    # For now, we will just check for common leaf types based on simple image attributes.
+    # This is a placeholder for the actual classification model.
+    # In real-life use, you would load your machine learning model here.
     
-    # You can add labels for the classes here
-    classes = ['Vegetable', 'Fruit', 'Other']
-    return classes[class_index]
+    image = image.convert('RGB')  # Ensure the image is in RGB format
+    width, height = image.size
+    
+    # Simple check based on dimensions (as an example)
+    if width < 200 and height < 200:
+        return "Small Leaf (Could be a herb)"
+    elif width > 400 and height > 400:
+        return "Large Leaf (Could be a tree)"
+    else:
+        return "Unknown Leaf Type (Could be a fruit or vegetable)"
+
+# Function to get weather forecast (Open-Meteo API)
+def get_weather(location):
+    lat, lon = location  # Convert location to lat and lon (you can improve this step)
+    url = f'https://api.open-meteo.com/v1/forecast?latitude={lat}&longitude={lon}&current_weather=true'
+    response = requests.get(url)
+    weather_data = response.json()
+
+    # Extract relevant information
+    temperature = weather_data['current_weather']['temperature']
+    description = weather_data['current_weather']['weathercode']
+    
+    # Return a text response
+    return f"The current temperature is {temperature}°C. Weather description: {description}"
 
 # Function to handle voice input
 def recognize_speech():
