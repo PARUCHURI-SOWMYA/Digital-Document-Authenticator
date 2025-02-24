@@ -40,10 +40,13 @@ if original_image is not None:
     col1, col2, col3 = st.columns(3)
     with col1:
         st.image(grayscale_image, caption="Grayscale", use_column_width=True)
+        st.write("Grayscale: Converts the original image to grayscale, removing all color information. Helps in analyzing document texture and structure without color interference.")
     with col2:
         st.image(edge_image, caption="Edge Detection", use_column_width=True)
+        st.write("Edge Detection: Highlights the edges of objects in the image. Useful for detecting tampering, alterations, or inconsistencies in document scans.")
     with col3:
         st.image(invert_image, caption="Inverted Colors", use_column_width=True)
+        st.write("Inverted Colors: Inverts the grayscale image, swapping light and dark areas. Can help reveal hidden patterns, marks, or alterations not easily visible.")
 
     # Option to Download the Processed Images
     st.write("### Download Authentication Images")
