@@ -5,7 +5,6 @@ import os
 import subprocess
 
 # Function to convert a PDF page to an image using ImageMagick
-
 def pdf_page_to_image(pdf_file, page_number):
     try:
         output_dir = "pdf_images"
@@ -16,10 +15,19 @@ def pdf_page_to_image(pdf_file, page_number):
         
         output_image_path = os.path.join(output_dir, f"page_{page_number}.jpg")
         command = ["magick", "convert", f"{pdf_path}[{page_number - 1}]", output_image_path]
-        subprocess.run(command, check=True)
+        result = subprocess.run(command, check=False, capture_output=True, text=True)
+        
+        if result.returncode != 0:
+            st.error(f"Error in ImageMagick conversion: {result.stderr}")
+            return None
+        
+        if not os.path.exists(output_image_path):
+            st.error("Failed to generate image. Ensure ImageMagick is installed and properly configured.")
+            return None
         
         return Image.open(output_image_path)
     except Exception as e:
+        st.error(f"Exception during PDF processing: {str(e)}")
         return None
 
 # Function to process an image
@@ -78,7 +86,7 @@ if uploaded_file is not None:
                 with col3:
                     st.image(invert_image, caption="Inverted Colors", use_column_width=True)
             else:
-                st.error("Invalid page number or unable to process the document.")
+                st.error("Invalid page number or unable to process the document. Make sure ImageMagick is installed and try again.")
 else:
     st.warning("Please upload an image or document to process.")
 
