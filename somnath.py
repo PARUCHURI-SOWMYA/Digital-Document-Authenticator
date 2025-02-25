@@ -1,15 +1,14 @@
 import streamlit as st
 from PIL import Image, ImageOps, ImageFilter
+import fitz  # pymupdf for handling PDFs
 import io
-import os
-from pdf2image import convert_from_bytes
 
-# Function to convert a PDF to images
+# Function to convert a PDF page to an image
 def pdf_to_images(pdf_file):
     try:
-        pdf_data = pdf_file.read()
-        images = convert_from_bytes(pdf_data)
-        return images
+        doc = fitz.open(stream=pdf_file.read(), filetype="pdf")
+        images = [page.get_pixmap(matrix=fitz.Matrix(2, 2)) for page in doc]
+        return [Image.frombytes("RGB", [img.width, img.height], img.samples) for img in images]
     except Exception as e:
         st.error(f"Exception during PDF processing: {str(e)}")
         return None
