@@ -2,25 +2,15 @@ import streamlit as st
 from PIL import Image, ImageOps, ImageFilter
 import io
 import os
-from wand.image import Image as WandImage
 
-# Function to convert a PDF page to an image using Wand (ImageMagick)
-def pdf_page_to_image(pdf_file, page_number):
+# Function to convert a PDF to images using a more basic approach
+def pdf_to_images(pdf_file):
     try:
-        output_dir = "pdf_images"
-        os.makedirs(output_dir, exist_ok=True)
-        pdf_path = os.path.join(output_dir, "temp.pdf")
-        
-        with open(pdf_path, "wb") as f:
-            f.write(pdf_file.read())
-        
-        with WandImage(filename=pdf_path + "[{}]".format(page_number - 1), resolution=300) as img:
-            img.format = "png"
-            img.background_color = "white"
-            img.alpha_channel = "remove"
-            img_path = os.path.join(output_dir, "temp.png")
-            img.save(filename=img_path)
-            return Image.open(img_path)
+        from pdfium import PdfDocument
+        pdf_data = pdf_file.read()
+        pdf = PdfDocument(memoryview(pdf_data))
+        images = [page.render().to_pil() for page in pdf]
+        return images
     except Exception as e:
         st.error(f"Exception during PDF processing: {str(e)}")
         return None
@@ -64,9 +54,10 @@ if uploaded_file is not None:
         
         if st.button("Process Document"):
             uploaded_file.seek(0)  # Reset file pointer
-            image = pdf_page_to_image(uploaded_file, page_number)
+            images = pdf_to_images(uploaded_file)
             
-            if image is not None:
+            if images and 1 <= page_number <= len(images):
+                image = images[page_number - 1]
                 st.write("### Extracted Page as Image")
                 st.image(image, caption=f"Page {page_number}", use_column_width=True)
                 
