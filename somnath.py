@@ -2,9 +2,9 @@ import streamlit as st
 from PIL import Image, ImageOps, ImageFilter
 import io
 import os
-from pdf2jpeg import convert_pdf_to_images  # Alternative method
+import subprocess
 
-# Function to convert a PDF page to an image
+# Function to convert a PDF page to an image using ImageMagick
 
 def pdf_page_to_image(pdf_file, page_number):
     try:
@@ -14,11 +14,11 @@ def pdf_page_to_image(pdf_file, page_number):
         with open(pdf_path, "wb") as f:
             f.write(pdf_file.read())
         
-        images = convert_pdf_to_images(pdf_path)
-        if 0 <= page_number - 1 < len(images):
-            return images[page_number - 1]
-        else:
-            return None
+        output_image_path = os.path.join(output_dir, f"page_{page_number}.jpg")
+        command = ["convert", f"{pdf_path}[{page_number - 1}]", output_image_path]
+        subprocess.run(command, check=True)
+        
+        return Image.open(output_image_path)
     except Exception as e:
         return None
 
