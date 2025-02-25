@@ -1,6 +1,6 @@
 import streamlit as st
 from PIL import Image, ImageOps, ImageFilter
-import PyPDF2
+import pypdf
 from pdf2image import convert_from_bytes
 import os
 
@@ -44,7 +44,7 @@ if uploaded_file is not None:
     
     elif file_extension == "pdf":
         st.write("### PDF Document Uploaded")
-        pdf_reader = PyPDF2.PdfReader(uploaded_file)
+        pdf_reader = pypdf.PdfReader(uploaded_file)
         total_pages = len(pdf_reader.pages)
         page_number = st.number_input(f"Enter page number (1-{total_pages}) to authenticate", min_value=1, max_value=total_pages, step=1)
         
