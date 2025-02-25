@@ -1,6 +1,5 @@
 import streamlit as st
 from PIL import Image, ImageOps, ImageFilter
-import pdfminer
 from pdfminer.high_level import extract_text
 import docx
 
