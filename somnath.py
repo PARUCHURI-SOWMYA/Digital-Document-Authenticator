@@ -1,20 +1,25 @@
 import streamlit as st
 from PIL import Image, ImageOps, ImageFilter
-import io
 import tempfile
 import os
 
-# Function to convert a PDF page to an image using PIL
+# Function to extract images from a PDF
 def pdf_to_images(pdf_file):
     try:
-        from pdf2image import convert_from_bytes  # Import inside function
-        images = convert_from_bytes(pdf_file.read())
+        from pdfium import PDFDocument  # Using pdfium for PDF processing
+        temp_pdf_path = os.path.join(tempfile.gettempdir(), "temp_uploaded.pdf")
+
+        with open(temp_pdf_path, "wb") as f:
+            f.write(pdf_file.read())
+
+        pdf = PDFDocument(temp_pdf_path)
+        images = [page.render(scale=2).to_pil() for page in pdf]
         return images
     except Exception as e:
         st.error(f"Error processing PDF: {str(e)}")
         return None
 
-# Function to process an image (grayscale, edge detection, invert)
+# Function to process an image
 def process_image(image):
     grayscale_image = ImageOps.grayscale(image)
     edge_image = image.filter(ImageFilter.FIND_EDGES)
@@ -74,7 +79,7 @@ if uploaded_file is not None:
                 with col3:
                     st.image(invert_image, caption="Inverted Colors", use_column_width=True)
         else:
-            st.error("Could not process PDF. Make sure Poppler is installed!")
+            st.error("Could not process PDF!")
 
 else:
     st.warning("Please upload an image or document.")
