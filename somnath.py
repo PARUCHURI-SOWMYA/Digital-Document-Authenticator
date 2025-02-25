@@ -1,14 +1,15 @@
 import streamlit as st
 from PIL import Image, ImageOps, ImageFilter
-import fitz  # pymupdf for handling PDFs
 import io
+import pdfium  # Pure Python PDF-to-image conversion
 
-# Function to convert a PDF page to an image
+# Function to convert a PDF to images
 def pdf_to_images(pdf_file):
     try:
-        doc = fitz.open(stream=pdf_file.read(), filetype="pdf")
-        images = [page.get_pixmap(matrix=fitz.Matrix(2, 2)) for page in doc]
-        return [Image.frombytes("RGB", [img.width, img.height], img.samples) for img in images]
+        pdf_data = pdf_file.read()
+        pdf = pdfium.PdfDocument(io.BytesIO(pdf_data))
+        images = [pdf.render_page(i, scale=2).to_pil() for i in range(len(pdf))]
+        return images
     except Exception as e:
         st.error(f"Exception during PDF processing: {str(e)}")
         return None
