@@ -2,7 +2,7 @@ import streamlit as st
 from PIL import Image, ImageOps, ImageFilter
 import numpy as np
 import io
-import fitz  # PyMuPDF for PDF handling
+import pymupdf  # PyMuPDF for PDF handling
 
 def extract_text_from_pdf(pdf_file, page_number):
     doc = fitz.open(stream=pdf_file.read(), filetype="pdf")
