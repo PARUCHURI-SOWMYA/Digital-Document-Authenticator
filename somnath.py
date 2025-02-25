@@ -3,6 +3,13 @@ from PIL import Image, ImageOps, ImageFilter
 import os
 import subprocess
 import shutil  # Added to check if ImageMagick is installed
+        # Check if ImageMagick is installed
+        if not shutil.which("magick"):
+            st.error("Error: ImageMagick is not installed or not in PATH. Please install it and restart the app.")
+            return None
+
+        command = ["magick", "convert", f"{pdf_path}[{page_number - 1}]", output_image_path]
+        subprocess.run(command, check=True)
 
 # Function to convert a PDF page to an image using ImageMagick
 def pdf_page_to_image(pdf_file, page_number):
@@ -15,14 +22,6 @@ def pdf_page_to_image(pdf_file, page_number):
             f.write(pdf_file.read())
 
         output_image_path = os.path.join(output_dir, f"page_{page_number}.jpg")
-
-        # Check if ImageMagick is installed
-        if not shutil.which("magick"):
-            st.error("Error: ImageMagick is not installed or not in PATH. Please install it and restart the app.")
-            return None
-
-        command = ["magick", "convert", f"{pdf_path}[{page_number - 1}]", output_image_path]
-        subprocess.run(command, check=True)
 
         if os.path.exists(output_image_path):
             return Image.open(output_image_path)
