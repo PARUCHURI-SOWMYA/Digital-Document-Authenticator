@@ -5,8 +5,9 @@ import subprocess
 import shutil
 
 # Set ImageMagick Path (Modify for your system if needed)
-IMAGE_MAGICK_PATH = shutil.which("C:\Program Files\ImageMagick-7.1.1-Q16-HDRI")
 
+DEFAULT_IMAGEMAGICK_PATH = r"C:\\Program Files\\ImageMagick-7.1.1-Q16-HDRI\\magick.exe"  # Adjust as needed
+IMAGE_MAGICK_PATH = shutil.which("magick") or DEFAULT_IMAGEMAGICK_PATH
 def check_imagemagick():
     """Check if ImageMagick is installed and supports PDF."""
     if not IMAGE_MAGICK_PATH:
