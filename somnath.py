@@ -2,14 +2,13 @@ import streamlit as st
 from PIL import Image, ImageOps, ImageFilter
 import io
 import os
+from pdf2image import convert_from_bytes
 
-# Function to convert a PDF to images using a more basic approach
+# Function to convert a PDF to images
 def pdf_to_images(pdf_file):
     try:
-        from pdfium import PdfDocument
         pdf_data = pdf_file.read()
-        pdf = PdfDocument(memoryview(pdf_data))
-        images = [page.render().to_pil() for page in pdf]
+        images = convert_from_bytes(pdf_data)
         return images
     except Exception as e:
         st.error(f"Exception during PDF processing: {str(e)}")
