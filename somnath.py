@@ -1,17 +1,33 @@
 import streamlit as st
 from PIL import Image, ImageOps, ImageFilter
 import io
-import pdfium  # Pure Python PDF-to-image conversion
+import os
+import subprocess
+from pdf2image import convert_from_bytes  # Alternative for PDF to image conversion
 
-# Function to convert a PDF to images
-def pdf_to_images(pdf_file):
+# Function to convert a PDF page to an image using ImageMagick or pdf2image
+def pdf_page_to_image(pdf_file, page_number):
     try:
-        pdf_data = pdf_file.read()
-        pdf = pdfium.PdfDocument(io.BytesIO(pdf_data))
-        images = [pdf.render_page(i, scale=2).to_pil() for i in range(len(pdf))]
-        return images
+        output_dir = "pdf_images"
+        os.makedirs(output_dir, exist_ok=True)
+        pdf_path = os.path.join(output_dir, "temp.pdf")
+        
+        with open(pdf_path, "wb") as f:
+            f.write(pdf_file.read())
+
+        output_image_path = os.path.join(output_dir, f"page_{page_number}.jpg")
+        command = ["magick", "convert", f"{pdf_path}[{page_number - 1}]", output_image_path]
+        
+        result = subprocess.run(command, capture_output=True, text=True)
+
+        if result.returncode == 0:
+            return Image.open(output_image_path)
+        else:
+            st.warning("ImageMagick failed. Using pdf2image instead.")
+            images = convert_from_bytes(open(pdf_path, "rb").read(), first_page=page_number, last_page=page_number)
+            return images[0] if images else None
     except Exception as e:
-        st.error(f"Exception during PDF processing: {str(e)}")
+        st.error(f"Error processing PDF: {str(e)}")
         return None
 
 # Function to process an image
@@ -53,10 +69,9 @@ if uploaded_file is not None:
         
         if st.button("Process Document"):
             uploaded_file.seek(0)  # Reset file pointer
-            images = pdf_to_images(uploaded_file)
+            image = pdf_page_to_image(uploaded_file, page_number)
             
-            if images and 1 <= page_number <= len(images):
-                image = images[page_number - 1]
+            if image is not None:
                 st.write("### Extracted Page as Image")
                 st.image(image, caption=f"Page {page_number}", use_column_width=True)
                 
