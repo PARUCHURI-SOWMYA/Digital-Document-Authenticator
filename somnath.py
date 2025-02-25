@@ -1,19 +1,20 @@
 import streamlit as st
 from PIL import Image, ImageOps, ImageFilter
-import tempfile
-import os
+import fitz  # PyMuPDF for PDF processing
+import io
 
 # Function to extract images from a PDF
 def pdf_to_images(pdf_file):
     try:
-        from pdfium import PDFDocument  # Using pdfium for PDF processing
-        temp_pdf_path = os.path.join(tempfile.gettempdir(), "temp_uploaded.pdf")
+        pdf_document = fitz.open(stream=pdf_file.read(), filetype="pdf")  # Open PDF from stream
+        images = []
+        
+        for page_num in range(len(pdf_document)):
+            page = pdf_document[page_num]
+            pix = page.get_pixmap()
+            img = Image.frombytes("RGB", [pix.width, pix.height], pix.samples)
+            images.append(img)
 
-        with open(temp_pdf_path, "wb") as f:
-            f.write(pdf_file.read())
-
-        pdf = PDFDocument(temp_pdf_path)
-        images = [page.render(scale=2).to_pil() for page in pdf]
         return images
     except Exception as e:
         st.error(f"Error processing PDF: {str(e)}")
