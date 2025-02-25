@@ -2,22 +2,14 @@ import streamlit as st
 from PIL import Image, ImageOps, ImageFilter
 import numpy as np
 import io
-from pdfminer.six import pdfinterp, pdfparser, pdfdocument, pdfpage, pdfpageaggregator, pdfdevice
-from pdfminer.converter import TextConverter
-from pdfminer.layout import LAParams
+import fitz  # PyMuPDF for PDF handling
 
-def extract_text_from_pdf(pdf_file):
-    output_string = io.StringIO()
-    parser = pdfparser.PDFParser(pdf_file)
-    doc = pdfdocument.PDFDocument(parser)
-    if not doc.is_extractable:
-        return ""
-    rsrcmgr = pdfinterp.PDFResourceManager()
-    device = TextConverter(rsrcmgr, output_string, laparams=LAParams())
-    interpreter = pdfinterp.PDFPageInterpreter(rsrcmgr, device)
-    for page in pdfpage.PDFPage.create_pages(doc):
-        interpreter.process_page(page)
-    return output_string.getvalue()
+def extract_text_from_pdf(pdf_file, page_number):
+    doc = fitz.open(stream=pdf_file.read(), filetype="pdf")
+    if page_number - 1 < len(doc):
+        page = doc[page_number - 1]
+        return page.get_text("text")
+    return ""
 
 def process_image(image):
     grayscale_image = ImageOps.grayscale(image)
@@ -58,13 +50,12 @@ if uploaded_file is not None:
     
     elif file_extension == "pdf":
         st.write("### PDF Document Uploaded")
-        pdf_text = extract_text_from_pdf(io.BytesIO(uploaded_file.getvalue()))
-        text_pages = pdf_text.split("\f")
-        total_pages = len(text_pages)
+        total_pages = len(fitz.open(stream=uploaded_file.read(), filetype="pdf"))
         page_number = st.number_input(f"Enter page number (1-{total_pages}) to authenticate", min_value=1, max_value=total_pages, step=1)
         
         if st.button("Process Document"):
-            text = text_pages[page_number - 1] if page_number <= total_pages else "No text found"
+            uploaded_file.seek(0)  # Reset file pointer after reading page count
+            text = extract_text_from_pdf(uploaded_file, page_number)
             st.write("### Extracted Text from Selected Page")
             st.text(text)
             
