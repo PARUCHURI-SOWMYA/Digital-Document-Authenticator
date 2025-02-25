@@ -1,13 +1,11 @@
 import streamlit as st
-import cv2
 import numpy as np
-from PIL import Image
+from PIL import Image, ImageOps
 
 def process_image(image):
-    img_array = np.array(image)
-    gray = cv2.cvtColor(img_array, cv2.COLOR_RGB2GRAY)
-    edges = cv2.Canny(gray, 100, 200)
-    inverted = cv2.bitwise_not(gray)
+    gray = ImageOps.grayscale(image)
+    edges = gray.filter(ImageFilter.FIND_EDGES)
+    inverted = ImageOps.invert(gray)
     return gray, edges, inverted
 
 def main():
@@ -21,25 +19,25 @@ def main():
         st.image(image, caption="Original Document", use_column_width=True)
         gray, edges, inverted = process_image(image)
         
-        st.image(gray, caption="Grayscale Version", use_column_width=True, channels="GRAY")
-        st.image(edges, caption="Edge Detection", use_column_width=True, channels="GRAY")
-        st.image(inverted, caption="Color Inverted", use_column_width=True, channels="GRAY")
+        st.image(gray, caption="Grayscale Version", use_column_width=True)
+        st.image(edges, caption="Edge Detection", use_column_width=True)
+        st.image(inverted, caption="Color Inverted", use_column_width=True)
         
         st.download_button(
             label="Download Grayscale Image",
-            data=cv2.imencode(".png", gray)[1].tobytes(),
+            data=gray.tobytes(),
             file_name="grayscale.png",
             mime="image/png"
         )
         st.download_button(
             label="Download Edge Detection Image",
-            data=cv2.imencode(".png", edges)[1].tobytes(),
+            data=edges.tobytes(),
             file_name="edges.png",
             mime="image/png"
         )
         st.download_button(
             label="Download Color Inverted Image",
-            data=cv2.imencode(".png", inverted)[1].tobytes(),
+            data=inverted.tobytes(),
             file_name="inverted.png",
             mime="image/png"
         )
