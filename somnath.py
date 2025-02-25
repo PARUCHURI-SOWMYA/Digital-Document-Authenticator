@@ -2,57 +2,66 @@ import streamlit as st
 from PIL import Image, ImageOps, ImageFilter
 import os
 import subprocess
-import shutil  # Added to check if ImageMagick is installed
-    
-# Check if ImageMagick is installed
-if not shutil.which("magick"):
-    st.error("ImageMagick is not installed. Please install it and restart the app.")
-else:
-    st.success("ImageMagick is installed and ready to use!")
+import shutil
 
-        
-# Function to convert a PDF page to an image using ImageMagick
+def check_imagemagick():
+    """Check if ImageMagick is installed and supports PDF."""
+    if not shutil.which("magick"):
+        return False, "ImageMagick is not installed. Please install it and restart the app."
+    
+    try:
+        result = subprocess.run(["magick", "-list", "format"], capture_output=True, text=True)
+        if "PDF" not in result.stdout:
+            return False, "ImageMagick is installed but does not support PDF processing. Install Ghostscript."
+    except Exception as e:
+        return False, f"Error checking ImageMagick: {e}"
+    
+    return True, "ImageMagick is installed and ready to use!"
+
+# Check ImageMagick installation
+installed, message = check_imagemagick()
+if not installed:
+    st.error(message)
+else:
+    st.success(message)
+
 def pdf_page_to_image(pdf_file, page_number):
+    """Convert a PDF page to an image using ImageMagick."""
     try:
         output_dir = "pdf_images"
         os.makedirs(output_dir, exist_ok=True)
         pdf_path = os.path.join(output_dir, "temp.pdf")
-
+        
         with open(pdf_path, "wb") as f:
             f.write(pdf_file.read())
-
+        
         output_image_path = os.path.join(output_dir, f"page_{page_number}.jpg")
         command = ["magick", "convert", f"{pdf_path}[{page_number - 1}]", output_image_path]
-        subprocess.run(command, check=True)
-
+        result = subprocess.run(command, capture_output=True, text=True)
+        
+        if result.returncode != 0:
+            st.error(f"ImageMagick error: {result.stderr}")
+            return None
+        
         if os.path.exists(output_image_path):
             return Image.open(output_image_path)
         else:
             st.error("ImageMagick failed to process the PDF.")
             return None
-
-    except FileNotFoundError as e:
-        st.error(f"Error processing PDF: {e}")
-        return None
-    except subprocess.CalledProcessError as e:
-        st.error("ImageMagick command failed. Please check ImageMagick installation.")
-        return None
     except Exception as e:
         st.error(f"Unexpected error: {e}")
         return None
 
-# Function to process an image
 def process_image(image):
     grayscale_image = ImageOps.grayscale(image)
     edge_image = image.filter(ImageFilter.FIND_EDGES)
     invert_image = ImageOps.invert(grayscale_image)
     return grayscale_image, edge_image, invert_image
 
-# App Title
+# Streamlit App
 st.title("Digital Document Authenticator")
-
-# File Upload Section
 st.subheader("Upload Original Image or Document")
+
 uploaded_file = st.file_uploader("Upload an image (jpg, png) or document (pdf)", type=["jpg", "jpeg", "png", "pdf"])
 
 if uploaded_file is not None:
@@ -79,7 +88,7 @@ if uploaded_file is not None:
         page_number = st.number_input("Enter page number to authenticate", min_value=1, step=1)
         
         if st.button("Process Document"):
-            uploaded_file.seek(0)  # Reset file pointer
+            uploaded_file.seek(0)
             image = pdf_page_to_image(uploaded_file, page_number)
             
             if image is not None:
@@ -101,6 +110,5 @@ if uploaded_file is not None:
 else:
     st.warning("Please upload an image or document to process.")
 
-# Footer
 st.markdown("---")
 st.write("Built with Streamlit for digital document authentication.")
