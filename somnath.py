@@ -1,6 +1,5 @@
 import streamlit as st
 from PIL import Image, ImageOps, ImageFilter
-import docx
 
 def display_pdf_pages(file, page_number):
     try:
@@ -50,9 +49,14 @@ def process_image(image):
     st.image(inverted, caption="Inverted Image", use_column_width=True)
 
 def extract_text_from_docx(file):
-    doc = docx.Document(file)
-    full_text = "\n".join([para.text for para in doc.paragraphs])
-    return full_text
+    try:
+        import docx
+        doc = docx.Document(file)
+        full_text = "\n".join([para.text for para in doc.paragraphs])
+        return full_text
+    except ImportError:
+        st.error("DOCX processing is unavailable. Install 'python-docx' to enable this feature.")
+        return ""
 
 def main():
     st.title("Digital Document Authentication and Verification Tool")
@@ -74,8 +78,9 @@ def main():
         elif file_type == "application/vnd.openxmlformats-officedocument.wordprocessingml.document":
             st.subheader("Word Document Text")
             extracted_text = extract_text_from_docx(uploaded_file)
-            highlighted_text = highlight_duplicate_text(extracted_text)
-            st.markdown(highlighted_text)
+            if extracted_text:
+                highlighted_text = highlight_duplicate_text(extracted_text)
+                st.markdown(highlighted_text)
         
         elif file_type in ["image/png", "image/jpeg"]:
             st.subheader("Processed Image")
