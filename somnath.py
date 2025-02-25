@@ -1,11 +1,9 @@
 import streamlit as st
 from PIL import Image, ImageOps, ImageFilter
-import io
 import os
 import subprocess
-from pdf2image import convert_from_bytes  # Alternative for PDF to image conversion
 
-# Function to convert a PDF page to an image using ImageMagick or pdf2image
+# Function to convert a PDF page to an image using ImageMagick
 def pdf_page_to_image(pdf_file, page_number):
     try:
         output_dir = "pdf_images"
@@ -17,15 +15,13 @@ def pdf_page_to_image(pdf_file, page_number):
 
         output_image_path = os.path.join(output_dir, f"page_{page_number}.jpg")
         command = ["magick", "convert", f"{pdf_path}[{page_number - 1}]", output_image_path]
-        
         result = subprocess.run(command, capture_output=True, text=True)
 
-        if result.returncode == 0:
+        if result.returncode == 0 and os.path.exists(output_image_path):
             return Image.open(output_image_path)
         else:
-            st.warning("ImageMagick failed. Using pdf2image instead.")
-            images = convert_from_bytes(open(pdf_path, "rb").read(), first_page=page_number, last_page=page_number)
-            return images[0] if images else None
+            st.error("ImageMagick failed to convert the PDF. Please ensure it is installed correctly.")
+            return None
     except Exception as e:
         st.error(f"Error processing PDF: {str(e)}")
         return None
