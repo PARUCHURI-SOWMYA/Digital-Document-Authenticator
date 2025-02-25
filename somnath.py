@@ -1,7 +1,5 @@
 import streamlit as st
 from PIL import Image, ImageOps, ImageFilter
-import cv2
-import numpy as np
 
 def display_pdf_forensically(file):
     st.error("PDF processing without additional libraries is not supported. Convert PDF to images before uploading.")
