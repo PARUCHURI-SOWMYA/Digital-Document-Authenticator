@@ -1,5 +1,6 @@
 import streamlit as st
 from PIL import Image, ImageOps, ImageFilter
+import fitz  # PyMuPDF for PDF handling
 import os
 
 def process_image(image):
@@ -18,8 +19,8 @@ def check_document_authenticity(text):
 st.title("Digital Document Authenticator")
 
 # File Upload Section
-st.subheader("Upload Original Image")
-uploaded_file = st.file_uploader("Upload an image (jpg, png)", type=["jpg", "jpeg", "png"])
+st.subheader("Upload Original Image or Document")
+uploaded_file = st.file_uploader("Upload an image (jpg, png) or document (pdf)", type=["jpg", "jpeg", "png", "pdf"])
 
 if uploaded_file is not None:
     file_extension = uploaded_file.name.split(".")[-1].lower()
@@ -40,8 +41,37 @@ if uploaded_file is not None:
         with col3:
             st.image(invert_image, caption="Inverted Colors", use_column_width=True)
     
+    elif file_extension == "pdf":
+        st.write("### PDF Document Uploaded")
+        doc = fitz.open(stream=uploaded_file.read(), filetype="pdf")
+        total_pages = len(doc)
+        page_number = st.number_input(f"Enter page number (1-{total_pages}) to authenticate", min_value=1, max_value=total_pages, step=1)
+        
+        if st.button("Process Document"):
+            page = doc[page_number - 1]
+            text = page.get_text("text") or "No text found"
+            st.write("### Extracted Text from Selected Page")
+            st.text(text)
+            
+            authenticity = check_document_authenticity(text)
+            st.write(f"### Authenticity Check: {authenticity}")
+            
+            # Convert page to image and apply transformations
+            pix = page.get_pixmap()
+            pil_image = Image.frombytes("RGB", [pix.width, pix.height], pix.samples)
+            grayscale_image, edge_image, invert_image = process_image(pil_image)
+            
+            st.write("### Authentication Image Outputs")
+            col1, col2, col3 = st.columns(3)
+            with col1:
+                st.image(grayscale_image, caption="Grayscale", use_column_width=True)
+            with col2:
+                st.image(edge_image, caption="Edge Detection", use_column_width=True)
+            with col3:
+                st.image(invert_image, caption="Inverted Colors", use_column_width=True)
+    
 else:
-    st.warning("Please upload an image to process.")
+    st.warning("Please upload an image or document to process.")
 
 # Footer
 st.markdown("---")
