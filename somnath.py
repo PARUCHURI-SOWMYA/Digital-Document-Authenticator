@@ -2,6 +2,7 @@ import streamlit as st
 from PIL import Image, ImageOps, ImageFilter
 import os
 import subprocess
+import shutil  # Added to check if ImageMagick is installed
 
 # Function to convert a PDF page to an image using ImageMagick
 def pdf_page_to_image(pdf_file, page_number):
@@ -9,21 +10,34 @@ def pdf_page_to_image(pdf_file, page_number):
         output_dir = "pdf_images"
         os.makedirs(output_dir, exist_ok=True)
         pdf_path = os.path.join(output_dir, "temp.pdf")
-        
+
         with open(pdf_path, "wb") as f:
             f.write(pdf_file.read())
 
         output_image_path = os.path.join(output_dir, f"page_{page_number}.jpg")
-        command = ["magick", "convert", f"{pdf_path}[{page_number - 1}]", output_image_path]
-        result = subprocess.run(command, capture_output=True, text=True)
 
-        if result.returncode == 0 and os.path.exists(output_image_path):
+        # Check if ImageMagick is installed
+        if not shutil.which("magick"):
+            st.error("Error: ImageMagick is not installed or not in PATH. Please install it and restart the app.")
+            return None
+
+        command = ["magick", "convert", f"{pdf_path}[{page_number - 1}]", output_image_path]
+        subprocess.run(command, check=True)
+
+        if os.path.exists(output_image_path):
             return Image.open(output_image_path)
         else:
-            st.error("ImageMagick failed to convert the PDF. Please ensure it is installed correctly.")
+            st.error("ImageMagick failed to process the PDF.")
             return None
+
+    except FileNotFoundError as e:
+        st.error(f"Error processing PDF: {e}")
+        return None
+    except subprocess.CalledProcessError as e:
+        st.error("ImageMagick command failed. Please check ImageMagick installation.")
+        return None
     except Exception as e:
-        st.error(f"Error processing PDF: {str(e)}")
+        st.error(f"Unexpected error: {e}")
         return None
 
 # Function to process an image
