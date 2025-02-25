@@ -1,16 +1,26 @@
 import streamlit as st
 from PIL import Image, ImageOps, ImageFilter
 import os
-from pdf2image import convert_from_bytes
+import subprocess
 
-# Function to convert a PDF page to an image using pdf2image
+# Function to convert PDF to image using Poppler's pdftoppm
 def pdf_page_to_image(pdf_file, page_number):
     try:
-        images = convert_from_bytes(pdf_file.read(), dpi=300)  # Convert PDF to image list
-        if 1 <= page_number <= len(images):
-            return images[page_number - 1]  # Return the requested page as an image
-        else:
-            return None
+        output_dir = "pdf_images"
+        os.makedirs(output_dir, exist_ok=True)
+        
+        # Save the uploaded PDF temporarily
+        pdf_path = os.path.join(output_dir, "temp.pdf")
+        with open(pdf_path, "wb") as f:
+            f.write(pdf_file.read())
+
+        # Convert PDF to image using pdftoppm
+        output_image_path = os.path.join(output_dir, f"page_{page_number}")
+        command = ["pdftoppm", "-jpeg", "-f", str(page_number), "-l", str(page_number), pdf_path, output_image_path]
+        subprocess.run(command, check=True)
+
+        image_path = f"{output_image_path}-1.jpg"
+        return Image.open(image_path) if os.path.exists(image_path) else None
     except Exception as e:
         st.error(f"Error processing PDF: {e}")
         return None
