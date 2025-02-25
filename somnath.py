@@ -2,37 +2,38 @@ import streamlit as st
 from PIL import Image, ImageOps, ImageFilter
 import io
 import os
-import subprocess
+from wand.image import Image as WandImage
+from wand.color import Color
 
-# Function to convert a PDF page to an image using ImageMagick
+# Function to convert a PDF page to an image using Wand
 def pdf_page_to_image(pdf_file, page_number):
     try:
         output_dir = "pdf_images"
         os.makedirs(output_dir, exist_ok=True)
+
         pdf_path = os.path.join(output_dir, "temp.pdf")
         
         # Save uploaded PDF to a temporary file
         with open(pdf_path, "wb") as f:
             f.write(pdf_file.read())
 
-        output_image_path = os.path.join(output_dir, f"page_{page_number}.jpg")
+        # Convert PDF to Image using Wand
+        with WandImage(filename=pdf_path + f"[{page_number - 1}]", resolution=300) as img:
+            img.background_color = Color("white")
+            img.alpha_channel = "remove"
+            img.format = "png"
+            
+            # Save image as a temporary file
+            output_image_path = os.path.join(output_dir, f"page_{page_number}.png")
+            img.save(filename=output_image_path)
 
-        # Use subprocess to convert PDF to image using ImageMagick
-        command = ["convert", f"{pdf_path}[{page_number - 1}]", output_image_path]
-        result = subprocess.run(command, capture_output=True, text=True)
-
-        # Handle conversion errors
-        if result.returncode != 0:
-            st.error(f"Error in PDF to Image conversion: {result.stderr}")
-            return None
-
-        return Image.open(output_image_path)
+            return Image.open(output_image_path)
 
     except Exception as e:
         st.error(f"Exception occurred: {e}")
         return None
 
-# Function to process an image into grayscale, edge detection, and inversion
+# Function to process an image
 def process_image(image):
     grayscale_image = ImageOps.grayscale(image)
     edge_image = image.filter(ImageFilter.FIND_EDGES)
