@@ -4,13 +4,16 @@ import os
 import subprocess
 import shutil
 
+# Set ImageMagick Path (Modify for your system if needed)
+IMAGE_MAGICK_PATH = shutil.which("magick") or r"C:\\Program Files\\ImageMagick-7.1.1-Q16-HDRI\\magick.exe"
+
 def check_imagemagick():
     """Check if ImageMagick is installed and supports PDF."""
-    if not shutil.which("magick"):
+    if not IMAGE_MAGICK_PATH:
         return False, "ImageMagick is not installed. Please install it and restart the app."
     
     try:
-        result = subprocess.run(["magick", "-list", "format"], capture_output=True, text=True)
+        result = subprocess.run([IMAGE_MAGICK_PATH, "-list", "format"], capture_output=True, text=True)
         if "PDF" not in result.stdout:
             return False, "ImageMagick is installed but does not support PDF processing. Install Ghostscript."
     except Exception as e:
@@ -36,7 +39,7 @@ def pdf_page_to_image(pdf_file, page_number):
             f.write(pdf_file.read())
         
         output_image_path = os.path.join(output_dir, f"page_{page_number}.jpg")
-        command = ["magick", "convert", f"{pdf_path}[{page_number - 1}]", output_image_path]
+        command = [IMAGE_MAGICK_PATH, "convert", f"{pdf_path}[{page_number - 1}]", output_image_path]
         result = subprocess.run(command, capture_output=True, text=True)
         
         if result.returncode != 0:
