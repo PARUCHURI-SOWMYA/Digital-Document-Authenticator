@@ -2,30 +2,27 @@ import streamlit as st
 from PIL import Image, ImageOps, ImageFilter
 import io
 import os
-import subprocess
+import pdfium
 
-# Function to convert a PDF page to an image using ImageMagick
+# Function to convert a PDF page to an image using pdfium
+
 def pdf_page_to_image(pdf_file, page_number):
     try:
         output_dir = "pdf_images"
         os.makedirs(output_dir, exist_ok=True)
         pdf_path = os.path.join(output_dir, "temp.pdf")
+        
         with open(pdf_path, "wb") as f:
             f.write(pdf_file.read())
         
-        output_image_path = os.path.join(output_dir, f"page_{page_number}.jpg")
-        command = ["magick", "convert", f"{pdf_path}[{page_number - 1}]", output_image_path]
-        result = subprocess.run(command, check=False, capture_output=True, text=True)
-        
-        if result.returncode != 0:
-            st.error(f"Error in ImageMagick conversion: {result.stderr}")
+        pdf = pdfium.PdfDocument(pdf_path)
+        if page_number < 1 or page_number > len(pdf):
+            st.error("Invalid page number.")
             return None
         
-        if not os.path.exists(output_image_path):
-            st.error("Failed to generate image. Ensure ImageMagick is installed and properly configured.")
-            return None
-        
-        return Image.open(output_image_path)
+        page = pdf[page_number - 1]
+        bitmap = page.render(scale=2).to_pil()
+        return bitmap
     except Exception as e:
         st.error(f"Exception during PDF processing: {str(e)}")
         return None
@@ -86,7 +83,7 @@ if uploaded_file is not None:
                 with col3:
                     st.image(invert_image, caption="Inverted Colors", use_column_width=True)
             else:
-                st.error("Invalid page number or unable to process the document. Make sure ImageMagick is installed and try again.")
+                st.error("Invalid page number or unable to process the document.")
 else:
     st.warning("Please upload an image or document to process.")
 
