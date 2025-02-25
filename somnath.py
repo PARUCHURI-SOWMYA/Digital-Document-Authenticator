@@ -1,8 +1,18 @@
 import streamlit as st
 from PIL import Image, ImageOps, ImageFilter
+import pdf2image
 
 def display_pdf_forensically(file):
-    st.error("PDF processing without additional libraries is not supported. Convert PDF to images before uploading.")
+    images = pdf2image.convert_from_bytes(file.read())
+    for page_num, img in enumerate(images):
+        gray = ImageOps.grayscale(img)
+        st.image(gray, caption=f"Grayscale Page {page_num + 1}", use_column_width=True)
+        
+        edge = gray.filter(ImageFilter.FIND_EDGES)
+        st.image(edge, caption=f"Edge Detection Page {page_num + 1}", use_column_width=True)
+        
+        inverted = ImageOps.invert(gray)
+        st.image(inverted, caption=f"Inverted Page {page_num + 1}", use_column_width=True)
 
 def check_text_duplicates(file):
     text = file.read().decode("utf-8")
