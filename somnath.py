@@ -1,36 +1,18 @@
 import streamlit as st
 from PIL import Image, ImageOps, ImageFilter
-import io
 import os
-from wand.image import Image as WandImage
-from wand.color import Color
+from pdf2image import convert_from_bytes
 
-# Function to convert a PDF page to an image using Wand
+# Function to convert a PDF page to an image using pdf2image
 def pdf_page_to_image(pdf_file, page_number):
     try:
-        output_dir = "pdf_images"
-        os.makedirs(output_dir, exist_ok=True)
-
-        pdf_path = os.path.join(output_dir, "temp.pdf")
-        
-        # Save uploaded PDF to a temporary file
-        with open(pdf_path, "wb") as f:
-            f.write(pdf_file.read())
-
-        # Convert PDF to Image using Wand
-        with WandImage(filename=pdf_path + f"[{page_number - 1}]", resolution=300) as img:
-            img.background_color = Color("white")
-            img.alpha_channel = "remove"
-            img.format = "png"
-            
-            # Save image as a temporary file
-            output_image_path = os.path.join(output_dir, f"page_{page_number}.png")
-            img.save(filename=output_image_path)
-
-            return Image.open(output_image_path)
-
+        images = convert_from_bytes(pdf_file.read(), dpi=300)  # Convert PDF to image list
+        if 1 <= page_number <= len(images):
+            return images[page_number - 1]  # Return the requested page as an image
+        else:
+            return None
     except Exception as e:
-        st.error(f"Exception occurred: {e}")
+        st.error(f"Error processing PDF: {e}")
         return None
 
 # Function to process an image
