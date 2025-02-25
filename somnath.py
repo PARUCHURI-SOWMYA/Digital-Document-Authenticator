@@ -1,20 +1,23 @@
 import streamlit as st
 from PIL import Image, ImageOps, ImageFilter
-import fitz  # PyMuPDF for PDF processing
+import PyPDF2
 import io
 
-# Function to extract images from a PDF
+# Function to extract images from a PDF using PyPDF2
 def pdf_to_images(pdf_file):
     try:
-        pdf_document = fitz.open(stream=pdf_file.read(), filetype="pdf")  # Open PDF from stream
         images = []
+        reader = PyPDF2.PdfReader(pdf_file)
         
-        for page_num in range(len(pdf_document)):
-            page = pdf_document[page_num]
-            pix = page.get_pixmap()
-            img = Image.frombytes("RGB", [pix.width, pix.height], pix.samples)
-            images.append(img)
-
+        for page_num in range(len(reader.pages)):
+            page = reader.pages[page_num]
+            if "/XObject" in page["/Resources"]:
+                xObject = page["/Resources"]["/XObject"].get_object()
+                for obj in xObject:
+                    if xObject[obj]["/Subtype"] == "/Image":
+                        data = xObject[obj]._data
+                        image = Image.open(io.BytesIO(data))
+                        images.append(image)
         return images
     except Exception as e:
         st.error(f"Error processing PDF: {str(e)}")
