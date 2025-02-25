@@ -1,8 +1,9 @@
 import streamlit as st
 from PIL import Image, ImageOps, ImageFilter
-import pdfplumber
-from pdf2image import convert_from_bytes
-import os
+import cv2
+import numpy as np
+import io
+import pdfminer.high_level as pdfminer
 
 def process_image(image):
     grayscale_image = ImageOps.grayscale(image)
@@ -11,7 +12,6 @@ def process_image(image):
     return grayscale_image, edge_image, invert_image
 
 def check_document_authenticity(text):
-    # Dummy check for originality (you can enhance this with NLP models)
     if "duplicate" in text.lower():
         return "Duplicate Document Detected"
     return "Original Document Detected"
@@ -44,34 +44,20 @@ if uploaded_file is not None:
     
     elif file_extension == "pdf":
         st.write("### PDF Document Uploaded")
-        with pdfplumber.open(uploaded_file) as pdf:
-            total_pages = len(pdf.pages)
-            page_number = st.number_input(f"Enter page number (1-{total_pages}) to authenticate", min_value=1, max_value=total_pages, step=1)
+        pdf_text = pdfminer.extract_text(io.BytesIO(uploaded_file.getvalue()))
+        text_pages = pdf_text.split("\f")
+        total_pages = len(text_pages)
+        page_number = st.number_input(f"Enter page number (1-{total_pages}) to authenticate", min_value=1, max_value=total_pages, step=1)
+        
+        if st.button("Process Document"):
+            text = text_pages[page_number - 1] if page_number <= total_pages else "No text found"
+            st.write("### Extracted Text from Selected Page")
+            st.text(text)
             
-            if st.button("Process Document"):
-                page = pdf.pages[page_number - 1]
-                text = page.extract_text() or "No text found"
-                st.write("### Extracted Text from Selected Page")
-                st.text(text)
-                
-                authenticity = check_document_authenticity(text)
-                st.write(f"### Authenticity Check: {authenticity}")
-                
-                # Convert page to image and apply transformations
-                images = convert_from_bytes(uploaded_file.getvalue(), first_page=page_number, last_page=page_number)
-                if images:
-                    pil_image = images[0]
-                    grayscale_image, edge_image, invert_image = process_image(pil_image)
-                    
-                    st.write("### Authentication Image Outputs")
-                    col1, col2, col3 = st.columns(3)
-                    with col1:
-                        st.image(grayscale_image, caption="Grayscale", use_column_width=True)
-                    with col2:
-                        st.image(edge_image, caption="Edge Detection", use_column_width=True)
-                    with col3:
-                        st.image(invert_image, caption="Inverted Colors", use_column_width=True)
-    
+            authenticity = check_document_authenticity(text)
+            st.write(f"### Authenticity Check: {authenticity}")
+            
+            st.write("Document processing complete.")
 else:
     st.warning("Please upload an image or document to process.")
 
