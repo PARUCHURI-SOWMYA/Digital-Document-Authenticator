@@ -1,63 +1,87 @@
 import streamlit as st
-import numpy as np
 from PIL import Image, ImageOps, ImageFilter
-import pytesseract
+import io
+from pdf2jpg import pdf2jpg
+import os
 
-def process_image(image):
-    gray = ImageOps.grayscale(image)
-    edges = gray.filter(ImageFilter.FIND_EDGES)
-    inverted = ImageOps.invert(gray)
-    return gray, edges, inverted
-
-def detect_duplicate_text(image):
-    text = pytesseract.image_to_string(image)
-    words = text.split()
-    duplicates = {word for word in words if words.count(word) > 1}
-    return text, duplicates
-
-def main():
-    st.title("Digital Document Authenticator")
-    st.write("Upload an academic certificate or ID proof (image format) to check for authenticity.")
-    
-    uploaded_file = st.file_uploader("Upload an Image", type=["png", "jpg", "jpeg"])
-    
-    if uploaded_file:
-        image = Image.open(uploaded_file)
-        st.image(image, caption="Original Document", use_column_width=True)
-        gray, edges, inverted = process_image(image)
+# Function to convert a PDF page to an image using pdf2jpg
+def pdf_page_to_image(pdf_file, page_number):
+    try:
+        output_dir = "pdf_images"
+        os.makedirs(output_dir, exist_ok=True)
+        pdf_path = os.path.join(output_dir, "temp.pdf")
+        with open(pdf_path, "wb") as f:
+            f.write(pdf_file.read())
         
-        st.image(gray, caption="Grayscale Version", use_column_width=True)
-        st.image(edges, caption="Edge Detection", use_column_width=True)
-        st.image(inverted, caption="Color Inverted", use_column_width=True)
-        
-        extracted_text, duplicates = detect_duplicate_text(gray)
-        st.subheader("Extracted Text")
-        st.text_area("Text from Image", extracted_text, height=200)
-        
-        if duplicates:
-            st.subheader("Duplicate Words Found")
-            st.write(", ".join(duplicates))
+        result = pdf2jpg.convert(pdf_path, output_dir, pages=str(page_number))
+        image_path = os.path.join(output_dir, f"temp_{page_number}.jpg")
+        if os.path.exists(image_path):
+            return Image.open(image_path)
         else:
-            st.write("No duplicate words found.")
+            return None
+    except Exception as e:
+        return None
+
+# Function to process an image
+def process_image(image):
+    grayscale_image = ImageOps.grayscale(image)
+    edge_image = image.filter(ImageFilter.FIND_EDGES)
+    invert_image = ImageOps.invert(grayscale_image)
+    return grayscale_image, edge_image, invert_image
+
+# App Title
+st.title("Digital Document Authenticator")
+
+# File Upload Section
+st.subheader("Upload Original Image or Document")
+uploaded_file = st.file_uploader("Upload an image (jpg, png) or document (pdf)", type=["jpg", "jpeg", "png", "pdf"])
+
+if uploaded_file is not None:
+    file_extension = uploaded_file.name.split(".")[-1].lower()
+    
+    if file_extension in ["jpg", "jpeg", "png"]:
+        st.write("### Original Image")
+        image = Image.open(uploaded_file)
+        st.image(image, caption="Uploaded Image", use_column_width=True)
         
-        st.download_button(
-            label="Download Grayscale Image",
-            data=gray.tobytes(),
-            file_name="grayscale.png",
-            mime="image/png"
-        )
-        st.download_button(
-            label="Download Edge Detection Image",
-            data=edges.tobytes(),
-            file_name="edges.png",
-            mime="image/png"
-        )
-        st.download_button(
-            label="Download Color Inverted Image",
-            data=inverted.tobytes(),
-            file_name="inverted.png",
-            mime="image/png"
-        )
+        grayscale_image, edge_image, invert_image = process_image(image)
+        
+        st.write("### Authentication Image Outputs")
+        col1, col2, col3 = st.columns(3)
+        with col1:
+            st.image(grayscale_image, caption="Grayscale", use_column_width=True)
+        with col2:
+            st.image(edge_image, caption="Edge Detection", use_column_width=True)
+        with col3:
+            st.image(invert_image, caption="Inverted Colors", use_column_width=True)
+    
+    elif file_extension == "pdf":
+        st.write("### PDF Document Uploaded")
+        page_number = st.number_input("Enter page number to authenticate", min_value=1, step=1)
+        
+        if st.button("Process Document"):
+            uploaded_file.seek(0)  # Reset file pointer
+            image = pdf_page_to_image(uploaded_file, page_number)
             
-if __name__ == "__main__":
-    main()
+            if image is not None:
+                st.write("### Extracted Page as Image")
+                st.image(image, caption=f"Page {page_number}", use_column_width=True)
+                
+                grayscale_image, edge_image, invert_image = process_image(image)
+                
+                st.write("### Authentication Image Outputs")
+                col1, col2, col3 = st.columns(3)
+                with col1:
+                    st.image(grayscale_image, caption="Grayscale", use_column_width=True)
+                with col2:
+                    st.image(edge_image, caption="Edge Detection", use_column_width=True)
+                with col3:
+                    st.image(invert_image, caption="Inverted Colors", use_column_width=True)
+            else:
+                st.error("Invalid page number or unable to process the document.")
+else:
+    st.warning("Please upload an image or document to process.")
+
+# Footer
+st.markdown("---")
+st.write("Built with Streamlit for digital document authentication.")
