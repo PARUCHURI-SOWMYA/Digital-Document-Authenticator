@@ -1,16 +1,20 @@
 import streamlit as st
 from PIL import Image, ImageOps, ImageFilter
-from pdfminer.high_level import extract_text
+import pdfreader
 import docx
 
 def display_pdf_pages(file, page_number):
-    text = extract_text(file)
-    pages = text.split('\f')
-    if page_number < 1 or page_number > len(pages):
-        st.error("Invalid page number")
-        return
-    
-    st.text_area(f"Page {page_number} Text", pages[page_number - 1], height=200)
+    with pdfreader.SimplePDFViewer(file) as viewer:
+        viewer.render()
+        pages = viewer.canvas.strings
+        num_pages = len(pages)
+        
+        if page_number < 1 or page_number > num_pages:
+            st.error("Invalid page number")
+            return
+        
+        text = pages[page_number - 1]
+        st.text_area(f"Page {page_number} Text", text, height=200)
 
 def highlight_duplicate_text(text):
     words = text.split()
