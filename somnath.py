@@ -1,22 +1,25 @@
 import streamlit as st
 from PIL import Image, ImageOps, ImageFilter
+import io
 
 def display_pdf_pages(file, page_number):
     try:
-        from pdfreader import SimplePDFViewer
-        with SimplePDFViewer(file) as viewer:
-            viewer.render()
-            pages = viewer.canvas.strings
-            num_pages = len(pages)
-            
-            if page_number < 1 or page_number > num_pages:
-                st.error("Invalid page number")
-                return
-            
-            text = pages[page_number - 1]
-            st.text_area(f"Page {page_number} Text", text, height=200)
+        import fitz  # PyMuPDF
+        file_bytes = io.BytesIO(file.getvalue())
+        doc = fitz.open(stream=file_bytes, filetype="pdf")
+        num_pages = len(doc)
+        
+        if page_number < 1 or page_number > num_pages:
+            st.error("Invalid page number")
+            return
+        
+        page = doc.load_page(page_number - 1)
+        text = page.get_text()
+        st.text_area(f"Page {page_number} Text", text, height=200)
     except ImportError:
-        st.error("PDF processing is unavailable. Install 'pdfreader' to enable this feature.")
+        st.error("PDF processing is unavailable. Install 'pymupdf' to enable this feature.")
+    except Exception as e:
+        st.error(f"An error occurred: {e}")
 
 def highlight_duplicate_text(text):
     words = text.split()
