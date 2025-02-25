@@ -1,18 +1,5 @@
 import streamlit as st
 from PIL import Image, ImageOps, ImageFilter
-import pdf2image
-
-def display_pdf_forensically(file):
-    images = pdf2image.convert_from_bytes(file.read())
-    for page_num, img in enumerate(images):
-        gray = ImageOps.grayscale(img)
-        st.image(gray, caption=f"Grayscale Page {page_num + 1}", use_column_width=True)
-        
-        edge = gray.filter(ImageFilter.FIND_EDGES)
-        st.image(edge, caption=f"Edge Detection Page {page_num + 1}", use_column_width=True)
-        
-        inverted = ImageOps.invert(gray)
-        st.image(inverted, caption=f"Inverted Page {page_num + 1}", use_column_width=True)
 
 def check_text_duplicates(file):
     text = file.read().decode("utf-8")
@@ -46,16 +33,12 @@ def process_image(image):
 
 def main():
     st.title("Digital Document Authentication and Verification Tool")
-    uploaded_file = st.file_uploader("Upload a document or image", type=["pdf", "txt", "png", "jpg", "jpeg"])
+    uploaded_file = st.file_uploader("Upload a document or image", type=["txt", "png", "jpg", "jpeg"])
     
     if uploaded_file:
         file_type = uploaded_file.type
         
-        if file_type == "application/pdf":
-            st.subheader("Forensic PDF View")
-            display_pdf_forensically(uploaded_file)
-        
-        elif file_type == "text/plain":
+        if file_type == "text/plain":
             st.subheader("Text Duplication Check")
             check_text_duplicates(uploaded_file)
         
