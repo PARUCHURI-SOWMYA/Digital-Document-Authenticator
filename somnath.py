@@ -1,6 +1,5 @@
 import streamlit as st
 from PIL import Image, ImageOps, ImageFilter
-import cv2
 import numpy as np
 import io
 import pdfminer.high_level as pdfminer
