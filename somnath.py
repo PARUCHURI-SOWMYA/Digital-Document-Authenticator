@@ -1,20 +1,23 @@
 import streamlit as st
 from PIL import Image, ImageOps, ImageFilter
-import pdfreader
 import docx
 
 def display_pdf_pages(file, page_number):
-    with pdfreader.SimplePDFViewer(file) as viewer:
-        viewer.render()
-        pages = viewer.canvas.strings
-        num_pages = len(pages)
-        
-        if page_number < 1 or page_number > num_pages:
-            st.error("Invalid page number")
-            return
-        
-        text = pages[page_number - 1]
-        st.text_area(f"Page {page_number} Text", text, height=200)
+    try:
+        from pdfreader import SimplePDFViewer
+        with SimplePDFViewer(file) as viewer:
+            viewer.render()
+            pages = viewer.canvas.strings
+            num_pages = len(pages)
+            
+            if page_number < 1 or page_number > num_pages:
+                st.error("Invalid page number")
+                return
+            
+            text = pages[page_number - 1]
+            st.text_area(f"Page {page_number} Text", text, height=200)
+    except ImportError:
+        st.error("PDF processing is unavailable. Install 'pdfreader' to enable this feature.")
 
 def highlight_duplicate_text(text):
     words = text.split()
