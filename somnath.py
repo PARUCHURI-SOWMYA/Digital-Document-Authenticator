@@ -2,14 +2,16 @@ import streamlit as st
 from PIL import Image, ImageOps, ImageFilter
 import numpy as np
 import io
-import pymupdf  # PyMuPDF for PDF handling
+import pandas as pd
+
+# Function to extract text from a PDF using pandas
 
 def extract_text_from_pdf(pdf_file, page_number):
-    doc = fitz.open(stream=pdf_file.read(), filetype="pdf")
-    if page_number - 1 < len(doc):
-        page = doc[page_number - 1]
-        return page.get_text("text")
-    return ""
+    try:
+        text = pd.read_fwf(pdf_file, encoding="utf-8")
+        return text.iloc[page_number - 1].to_string() if page_number - 1 < len(text) else ""
+    except Exception as e:
+        return "Error extracting text"
 
 def process_image(image):
     grayscale_image = ImageOps.grayscale(image)
@@ -50,11 +52,10 @@ if uploaded_file is not None:
     
     elif file_extension == "pdf":
         st.write("### PDF Document Uploaded")
-        total_pages = len(fitz.open(stream=uploaded_file.read(), filetype="pdf"))
-        page_number = st.number_input(f"Enter page number (1-{total_pages}) to authenticate", min_value=1, max_value=total_pages, step=1)
+        page_number = st.number_input("Enter page number to authenticate", min_value=1, step=1)
         
         if st.button("Process Document"):
-            uploaded_file.seek(0)  # Reset file pointer after reading page count
+            uploaded_file.seek(0)  # Reset file pointer
             text = extract_text_from_pdf(uploaded_file, page_number)
             st.write("### Extracted Text from Selected Page")
             st.text(text)
