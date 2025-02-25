@@ -2,10 +2,9 @@ import streamlit as st
 from PIL import Image, ImageOps, ImageFilter
 import io
 import os
-import pdfium
+from wand.image import Image as WandImage
 
-# Function to convert a PDF page to an image using pdfium
-
+# Function to convert a PDF page to an image using Wand (ImageMagick)
 def pdf_page_to_image(pdf_file, page_number):
     try:
         output_dir = "pdf_images"
@@ -15,14 +14,13 @@ def pdf_page_to_image(pdf_file, page_number):
         with open(pdf_path, "wb") as f:
             f.write(pdf_file.read())
         
-        pdf = pdfium.PdfDocument(pdf_path)
-        if page_number < 1 or page_number > len(pdf):
-            st.error("Invalid page number.")
-            return None
-        
-        page = pdf[page_number - 1]
-        bitmap = page.render(scale=2).to_pil()
-        return bitmap
+        with WandImage(filename=pdf_path + "[{}]".format(page_number - 1), resolution=300) as img:
+            img.format = "png"
+            img.background_color = "white"
+            img.alpha_channel = "remove"
+            img_path = os.path.join(output_dir, "temp.png")
+            img.save(filename=img_path)
+            return Image.open(img_path)
     except Exception as e:
         st.error(f"Exception during PDF processing: {str(e)}")
         return None
