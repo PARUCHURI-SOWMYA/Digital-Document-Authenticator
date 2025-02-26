@@ -1,94 +1,80 @@
 import streamlit as st
 from PIL import Image, ImageOps, ImageFilter
-import io
+from pdf2image import convert_from_path
 
-def display_pdf_pages(file, page_number):
-    try:
-        import fitz  # PyMuPDF
-        file_bytes = io.BytesIO(file.getvalue())
-        doc = fitz.open(stream=file_bytes, filetype="pdf")
-        num_pages = len(doc)
+# Function to convert PDF to images (one per page)
+def pdf_to_images(pdf_file):
+    images = convert_from_path(pdf_file)
+    return images  # Return a list of images, one for each page in the PDF
+
+# App Title
+st.title("Digital Document Authenticator")
+
+# File Upload Section
+st.subheader("Upload Document (PDF or Image)")
+original_document = st.file_uploader("Upload the document to process", type=["jpg", "jpeg", "png", "pdf"])
+
+# Process the document when uploaded
+if original_document is not None:
+    if original_document.type == "application/pdf":
+        # Convert PDF to images
+        images = pdf_to_images(original_document)
         
-        if page_number < 1 or page_number > num_pages:
-            st.error("Invalid page number")
-            return
-        
-        page = doc.load_page(page_number - 1)
-        text = page.get_text()
-        st.text_area(f"Page {page_number} Text", text, height=200)
-    except ImportError:
-        st.error("PDF processing is unavailable. Install 'pymupdf' to enable this feature.")
-    except Exception as e:
-        st.error(f"An error occurred: {e}")
+        # Show page selection dropdown
+        page_numbers = [f"Page {i+1}" for i in range(len(images))]
+        page_selected = st.selectbox("Select the page to verify", page_numbers)
 
-def highlight_duplicate_text(text):
-    words = text.split()
-    word_count = {}
-    highlighted_text = ""
-    
-    for word in words:
-        if word in word_count:
-            word_count[word] += 1
-            highlighted_text += f"**{word}** "
-        else:
-            word_count[word] = 1
-            highlighted_text += word + " "
-    
-    return highlighted_text.strip()
+        # Get the selected page (0-indexed)
+        page_index = page_numbers.index(page_selected)
+        selected_image = images[page_index]
 
-def check_text_duplicates(file):
-    text = file.read().decode("utf-8")
-    highlighted_text = highlight_duplicate_text(text)
-    st.markdown(highlighted_text)
+        # Display the original page
+        st.write(f"### Selected Page: {page_selected}")
+        st.image(selected_image, caption=f"Page {page_index+1}", use_column_width=True)
 
-def process_image(image):
-    gray = ImageOps.grayscale(image)
-    st.image(gray, caption="Grayscale Image", use_column_width=True)
-    
-    edge = gray.filter(ImageFilter.FIND_EDGES)
-    st.image(edge, caption="Edge Detection", use_column_width=True)
-    
-    inverted = ImageOps.invert(gray)
-    st.image(inverted, caption="Inverted Image", use_column_width=True)
+    else:
+        # If it's an image, open it directly
+        selected_image = Image.open(original_document)
+        st.image(selected_image, caption="Original Image", use_column_width=True)
 
-def extract_text_from_docx(file):
-    try:
-        import docx
-        doc = docx.Document(file)
-        full_text = "\n".join([para.text for para in doc.paragraphs])
-        return full_text
-    except ImportError:
-        st.error("DOCX processing is unavailable. Install 'python-docx' to enable this feature.")
-        return ""
+    # Process the selected page/image
+    grayscale_image = ImageOps.grayscale(selected_image)
+    edge_image = selected_image.filter(ImageFilter.FIND_EDGES)
+    invert_image = ImageOps.invert(grayscale_image)
 
-def main():
-    st.title("Digital Document Authentication and Verification Tool")
-    uploaded_file = st.file_uploader("Upload a document or image", type=["pdf", "txt", "docx", "png", "jpg", "jpeg"])
-    
-    if uploaded_file:
-        file_type = uploaded_file.type
-        
-        if file_type == "application/pdf":
-            st.subheader("PDF Text Display")
-            page_number = st.number_input("Enter Page Number to Process", min_value=1, step=1)
-            if st.button("Process PDF Page"):
-                display_pdf_pages(uploaded_file, page_number)
-        
-        elif file_type == "text/plain":
-            st.subheader("Text Duplication Check")
-            check_text_duplicates(uploaded_file)
-        
-        elif file_type == "application/vnd.openxmlformats-officedocument.wordprocessingml.document":
-            st.subheader("Word Document Text")
-            extracted_text = extract_text_from_docx(uploaded_file)
-            if extracted_text:
-                highlighted_text = highlight_duplicate_text(extracted_text)
-                st.markdown(highlighted_text)
-        
-        elif file_type in ["image/png", "image/jpeg"]:
-            st.subheader("Processed Image")
-            image = Image.open(uploaded_file)
-            process_image(image)
+    # Display all processed images with descriptions
+    st.write("### Authentication Image Outputs")
 
-if __name__ == "__main__":
-    main()
+    col1, col2, col3 = st.columns(3)
+    with col1:
+        st.image(grayscale_image, caption="Grayscale", use_column_width=True)
+        st.write("Grayscale: Highlights alterations in document texture.")
+    with col2:
+        st.image(edge_image, caption="Edge Detection", use_column_width=True)
+        st.write("Edge Detection: Detects tampered areas based on edge misalignment.")
+    with col3:
+        st.image(invert_image, caption="Inverted Colors", use_column_width=True)
+        st.write("Inverted Colors: Reveals hidden marks, watermarks, or text alterations.")
+
+    # Option to download the processed images
+    st.write("### Download Authentication Images")
+    grayscale_image.save("grayscale_output.png")
+    edge_image.save("edge_output.png")
+    invert_image.save("invert_output.png")
+
+    col1, col2, col3 = st.columns(3)
+    with col1:
+        with open("grayscale_output.png", "rb") as file:
+            st.download_button("Download Grayscale", data=file, file_name="grayscale_output.png", mime="image/png")
+    with col2:
+        with open("edge_output.png", "rb") as file:
+            st.download_button("Download Edge Detection", data=file, file_name="edge_output.png", mime="image/png")
+    with col3:
+        with open("invert_output.png", "rb") as file:
+            st.download_button("Download Inverted Colors", data=file, file_name="invert_output.png", mime="image/png")
+else:
+    st.warning("Please upload an original image or PDF to process.")
+
+# Footer
+st.markdown("---")
+st.write("Built with Streamlit for digital document authentication.")
