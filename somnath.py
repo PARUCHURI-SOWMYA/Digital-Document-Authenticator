@@ -1,79 +1,105 @@
-import streamlit as st
+ import streamlit as st
 from PIL import Image, ImageOps, ImageFilter
-from pdf2image import convert_from_path
+import os
+import subprocess
+import shutil  # Added to check if ImageMagick is installed
+    
+# Check if ImageMagick is installed
+if not shutil.which("magick"):
+    st.error("ImageMagick is not installed. Please install it and restart the app.")
+else:
+    st.success("ImageMagick is installed and ready to use!")
 
-# Function to convert PDF to images (one per page)
-def pdf_to_images(pdf_file):
-    images = convert_from_path(pdf_file)
-    return images  # Return a list of images, one for each page in the PDF
+        
+# Function to convert a PDF page to an image using ImageMagick
+def pdf_page_to_image(pdf_file, page_number):
+    try:
+        output_dir = "pdf_images"
+        os.makedirs(output_dir, exist_ok=True)
+        pdf_path = os.path.join(output_dir, "temp.pdf")
+
+        with open(pdf_path, "wb") as f:
+            f.write(pdf_file.read())
+
+        output_image_path = os.path.join(output_dir, f"page_{page_number}.jpg")
+        command = ["magick", "convert", f"{pdf_path}[{page_number - 1}]", output_image_path]
+        subprocess.run(command, check=True)
+
+        if os.path.exists(output_image_path):
+            return Image.open(output_image_path)
+        else:
+            st.error("ImageMagick failed to process the PDF.")
+            return None
+
+    except FileNotFoundError as e:
+        st.error(f"Error processing PDF: {e}")
+        return None
+    except subprocess.CalledProcessError as e:
+        st.error("ImageMagick command failed. Please check ImageMagick installation.")
+        return None
+    except Exception as e:
+        st.error(f"Unexpected error: {e}")
+        return None
+
+# Function to process an image
+def process_image(image):
+    grayscale_image = ImageOps.grayscale(image)
+    edge_image = image.filter(ImageFilter.FIND_EDGES)
+    invert_image = ImageOps.invert(grayscale_image)
+    return grayscale_image, edge_image, invert_image
 
 # App Title
 st.title("Digital Document Authenticator")
 
 # File Upload Section
-st.subheader("Upload Document (PDF or Image)")
-original_document = st.file_uploader("Upload the document to process", type=["jpg", "jpeg", "png", "pdf"])
+st.subheader("Upload Original Image or Document")
+uploaded_file = st.file_uploader("Upload an image (jpg, png) or document (pdf)", type=["jpg", "jpeg", "png", "pdf"])
 
-# Process the document when uploaded
-if original_document is not None:
-    if original_document.type == "application/pdf":
-        # Convert PDF to images
-        images = pdf_to_images(original_document)
+if uploaded_file is not None:
+    file_extension = uploaded_file.name.split(".")[-1].lower()
+    
+    if file_extension in ["jpg", "jpeg", "png"]:
+        st.write("### Original Image")
+        image = Image.open(uploaded_file)
+        st.image(image, caption="Uploaded Image", use_column_width=True)
         
-        # Show page selection dropdown
-        page_numbers = [f"Page {i+1}" for i in range(len(images))]
-        page_selected = st.selectbox("Select the page to verify", page_numbers)
-
-        # Get the selected page (0-indexed)
-        page_index = page_numbers.index(page_selected)
-        selected_image = images[page_index]
-
-        # Display the original page
-        st.write(f"### Selected Page: {page_selected}")
-        st.image(selected_image, caption=f"Page {page_index+1}", use_column_width=True)
-
-    else:
-        # If it's an image, open it directly
-        selected_image = Image.open(original_document)
-        st.image(selected_image, caption="Original Image", use_column_width=True)
-
-    # Process the selected page/image
-    grayscale_image = ImageOps.grayscale(selected_image)
-    edge_image = selected_image.filter(ImageFilter.FIND_EDGES)
-    invert_image = ImageOps.invert(grayscale_image)
-
-    # Display all processed images with descriptions
-    st.write("### Authentication Image Outputs")
-
-    col1, col2, col3 = st.columns(3)
-    with col1:
-        st.image(grayscale_image, caption="Grayscale", use_column_width=True)
-        st.write("Grayscale: Highlights alterations in document texture.")
-    with col2:
-        st.image(edge_image, caption="Edge Detection", use_column_width=True)
-        st.write("Edge Detection: Detects tampered areas based on edge misalignment.")
-    with col3:
-        st.image(invert_image, caption="Inverted Colors", use_column_width=True)
-        st.write("Inverted Colors: Reveals hidden marks, watermarks, or text alterations.")
-
-    # Option to download the processed images
-    st.write("### Download Authentication Images")
-    grayscale_image.save("grayscale_output.png")
-    edge_image.save("edge_output.png")
-    invert_image.save("invert_output.png")
-
-    col1, col2, col3 = st.columns(3)
-    with col1:
-        with open("grayscale_output.png", "rb") as file:
-            st.download_button("Download Grayscale", data=file, file_name="grayscale_output.png", mime="image/png")
-    with col2:
-        with open("edge_output.png", "rb") as file:
-            st.download_button("Download Edge Detection", data=file, file_name="edge_output.png", mime="image/png")
-    with col3:
-        with open("invert_output.png", "rb") as file:
-            st.download_button("Download Inverted Colors", data=file, file_name="invert_output.png", mime="image/png")
+        grayscale_image, edge_image, invert_image = process_image(image)
+        
+        st.write("### Authentication Image Outputs")
+        col1, col2, col3 = st.columns(3)
+        with col1:
+            st.image(grayscale_image, caption="Grayscale", use_column_width=True)
+        with col2:
+            st.image(edge_image, caption="Edge Detection", use_column_width=True)
+        with col3:
+            st.image(invert_image, caption="Inverted Colors", use_column_width=True)
+    
+    elif file_extension == "pdf":
+        st.write("### PDF Document Uploaded")
+        page_number = st.number_input("Enter page number to authenticate", min_value=1, step=1)
+        
+        if st.button("Process Document"):
+            uploaded_file.seek(0)  # Reset file pointer
+            image = pdf_page_to_image(uploaded_file, page_number)
+            
+            if image is not None:
+                st.write("### Extracted Page as Image")
+                st.image(image, caption=f"Page {page_number}", use_column_width=True)
+                
+                grayscale_image, edge_image, invert_image = process_image(image)
+                
+                st.write("### Authentication Image Outputs")
+                col1, col2, col3 = st.columns(3)
+                with col1:
+                    st.image(grayscale_image, caption="Grayscale", use_column_width=True)
+                with col2:
+                    st.image(edge_image, caption="Edge Detection", use_column_width=True)
+                with col3:
+                    st.image(invert_image, caption="Inverted Colors", use_column_width=True)
+            else:
+                st.error("Invalid page number or unable to process the document.")
 else:
-    st.warning("Please upload an original image or PDF to process.")
+    st.warning("Please upload an image or document to process.")
 
 # Footer
 st.markdown("---")
