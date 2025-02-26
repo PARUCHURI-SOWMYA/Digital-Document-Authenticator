@@ -1,15 +1,11 @@
 import streamlit as st
 from PIL import Image, ImageOps, ImageFilter
-from pdf2image import convert_from_bytes
-import os
-
-# Specify Poppler path if needed (for Windows users)
-POPPLER_PATH = r"C:\\poppler-23.11.0\\Library\\bin"  # Update this path if necessary
+from pdf2image import convert_from_path
 
 # Function to convert PDF to images (one per page)
-def pdf_to_images(pdf_bytes):
-    images = convert_from_bytes(pdf_bytes.read(), poppler_path=POPPLER_PATH)
-    return images
+def pdf_to_images(pdf_file):
+    images = convert_from_path(pdf_file)
+    return images  # Return a list of images, one for each page in the PDF
 
 # App Title
 st.title("Digital Document Authenticator")
@@ -62,16 +58,20 @@ if original_document is not None:
 
     # Option to download the processed images
     st.write("### Download Authentication Images")
-    output_files = {"Grayscale": grayscale_image, "Edge Detection": edge_image, "Inverted Colors": invert_image}
-    
-    col1, col2, col3 = st.columns(3)
-    for (name, image), col in zip(output_files.items(), [col1, col2, col3]):
-        output_path = f"{name.lower().replace(' ', '_')}.png"
-        image.save(output_path)
-        with col:
-            with open(output_path, "rb") as file:
-                st.download_button(f"Download {name}", data=file, file_name=output_path, mime="image/png")
+    grayscale_image.save("grayscale_output.png")
+    edge_image.save("edge_output.png")
+    invert_image.save("invert_output.png")
 
+    col1, col2, col3 = st.columns(3)
+    with col1:
+        with open("grayscale_output.png", "rb") as file:
+            st.download_button("Download Grayscale", data=file, file_name="grayscale_output.png", mime="image/png")
+    with col2:
+        with open("edge_output.png", "rb") as file:
+            st.download_button("Download Edge Detection", data=file, file_name="edge_output.png", mime="image/png")
+    with col3:
+        with open("invert_output.png", "rb") as file:
+            st.download_button("Download Inverted Colors", data=file, file_name="invert_output.png", mime="image/png")
 else:
     st.warning("Please upload an original image or PDF to process.")
 
