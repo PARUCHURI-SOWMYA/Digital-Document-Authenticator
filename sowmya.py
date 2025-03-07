@@ -3,6 +3,18 @@ from PIL import Image, ImageOps, ImageFilter
 from pdf2image import convert_from_bytes
 import pytesseract
 from io import BytesIO
+import os
+
+# Install required packages if not available
+try:
+    import pdf2image
+    import pytesseract
+    from PIL import Image, ImageOps, ImageFilter
+except ImportError:
+    os.system('pip install pdf2image pytesseract Pillow')
+    import pdf2image
+    import pytesseract
+    from PIL import Image, ImageOps, ImageFilter
 
 # App Title
 st.title("Digital Document Authenticator")
@@ -60,10 +72,4 @@ if document is not None:
         # Download Processed Image
         img_byte_arr = BytesIO()
         auth_image.save(img_byte_arr, format="PNG")
-        st.download_button("Download Processed Image", data=img_byte_arr.getvalue(), file_name="processed_image.png", mime="image/png")
-else:
-    st.warning("Please upload a document to process.")
-
-# Footer
-st.markdown("---")
-st.write("Built with Streamlit for digital document authentication.")
+        st.download_button("Download Processed Image", data=img_byte_arr
