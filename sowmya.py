@@ -72,7 +72,7 @@ if document is not None:
         # Download Processed Image
         img_byte_arr = BytesIO()
         auth_image.save(img_byte_arr, format="PNG")
-         st.download_button("Download Processed Image", data=img_byte_arr.getvalue(), file_name="processed_image.png", mime="image/png")
+        st.download_button("Download Processed Image", data=img_byte_arr.getvalue(), file_name="processed_image.png", mime="image/png")
 else:
     st.warning("Please upload a document to process.")
 
